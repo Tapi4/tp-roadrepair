@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Game</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: transparent;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            position: relative;
+        }
+        .message-box {
+            position: absolute;
+            top: 330px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: none;
+        }
+        .game-container {
+            display: none;
+            grid-template-columns: repeat(4, 100px);
+            grid-gap: 10px;
+        }
+        .card {
+            width: 100px;
+            height: 100px;
+            background-color: #f3f3f3;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 24px;
+            font-weight: bold;
+            user-select: none;
+        }
+        .card.flipped {
+            background-color: #4caf50;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="message-box" id="messageBox">Complete the memorygame !</div>
+
+    <div class="game-container" id="gameContainer">
+    </div>
+
+    <script>
+        const cardsArray = ['A', 'A', 'B', 'B', 'C', 'C', 'D', 'D', 'F', 'F', 'E', 'E',];
+        let flippedCards = [];
+        let matchedPairs = 0;
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function createCard(letter) {
+            const card = document.createElement('div');
+            card.classList.add('card');
+            card.dataset.letter = letter;
+            card.addEventListener('click', flipCard);
+            return card;
+        }
+
+        function flipCard() {
+            if (flippedCards.length < 2 && !this.classList.contains('flipped')) {
+                this.classList.add('flipped');
+                this.textContent = this.dataset.letter;
+                flippedCards.push(this);
+
+                if (flippedCards.length === 2) {
+                    checkMatch();
+                }
+            }
+        }
+
+        function checkMatch() {
+            const [firstCard, secondCard] = flippedCards;
+            if (firstCard.dataset.letter === secondCard.dataset.letter) {
+                matchedPairs++;
+                flippedCards = [];
+                if (matchedPairs === cardsArray.length / 2) {
+                    fetch(`https://${GetParentResourceName()}/memoryGameCompleted`, { method: 'POST' });
+                    setTimeout(hideGame, 500);
+                }
+            } else {
+                setTimeout(() => {
+                    firstCard.classList.remove('flipped');
+                    secondCard.classList.remove('flipped');
+                    firstCard.textContent = '';
+                    secondCard.textContent = '';
+                    flippedCards = [];
+                }, 1000);
+            }
+        }
+
+        function startGame() {
+            const gameContainer = document.getElementById('gameContainer');
+            gameContainer.innerHTML = '';
+            matchedPairs = 0;
+            flippedCards = [];
+            const shuffledArray = shuffle(cardsArray.slice());
+            shuffledArray.forEach(letter => {
+                const card = createCard(letter);
+                gameContainer.appendChild(card);
+            });
+            gameContainer.style.display = 'grid';
+        }
+
+        function hideGame() {
+            const gameContainer = document.getElementById('gameContainer');
+            gameContainer.style.display = 'none';
+        }
+
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'show_memory_game') {
+                startGame();
+                document.getElementById('messageBox').style.display = 'block';
+            } else if (event.data.type === 'hide_memory_game') {
+                hideGame();
+                document.getElementById('messageBox').style.display = 'none';
+            }
+        });
+
+    </script>
+</body>
+</html>
